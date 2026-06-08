@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ShieldCheck, 
@@ -15,24 +15,20 @@ import {
   ChevronRight, 
   Info, 
   Sparkles, 
-  FileText, 
-  Phone, 
-  MapPin, 
-  Clock, 
-  CornerDownRight, 
-  Check, 
-  X,
-  Volume2,
-  Printer,
-  FileCheck2,
+  Printer, 
+  FileCheck2, 
   RotateCcw,
-  Copy
+  Phone,
+  MapPin,
+  X
 } from "lucide-react";
 import { CATEGORIES, CERTIFICATIONS, EQUIPMENTS } from "./data";
 import { Category, Certification, SubmissionResponse } from "./types";
 import OemConfigurator from "./components/OemConfigurator";
+import { Language, LOCALES, getLocalizedCategories, getLocalizedCertifications, getLocalizedEquipments } from "./locales";
 
 export default function App() {
+  const [lang, setLang] = useState<Language>("en");
   const [activeTab, setActiveTab] = useState<string>("home");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [activeFacilityStep, setActiveFacilityStep] = useState<number>(0);
@@ -47,13 +43,19 @@ export default function App() {
   const [name, setName] = useState<string>("");
   const [company, setCompany] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  const [serviceType, setServiceType] = useState<string>("OEM Service");
+  const [serviceType, setServiceType] = useState<string>("OEM Formulation Service");
   const [message, setMessage] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submissionReceipt, setSubmissionReceipt] = useState<SubmissionResponse | null>(null);
+  const [formError, setFormError] = useState<string>("");
 
   // Header scroll shadow toggle
   const [scrollActive, setScrollActive] = useState<boolean>(false);
+
+  const t = LOCALES[lang];
+  const localizedCategories = getLocalizedCategories(lang, CATEGORIES);
+  const localizedCertifications = getLocalizedCertifications(lang, CERTIFICATIONS);
+  const localizedEquipments = getLocalizedEquipments(lang, EQUIPMENTS);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -95,14 +97,19 @@ export default function App() {
     };
   }, []);
 
+  // Sync serviceType selection on language toggle
+  useEffect(() => {
+    setServiceType(lang === "zh" ? "OEM 生产代工服务" : "OEM Formulation Service");
+  }, [lang]);
+
   // Handles loading loaded custom configuration from OemConfigurator directly into inquiry form
   const handleApplyConfig = (configText: string) => {
     setMessage((prev) => {
-      if (prev.includes("[OEM/ODM SPEC PRESET]")) {
+      if (prev.includes("[OEM/ODM SPEC PRESET]") || prev.includes("[OEM/ODM 生产规格参数配置]")) {
         // replace old config
         return configText;
       }
-      return prev ? `${configText}\n\n[Project Notes]: ${prev}` : configText;
+      return prev ? `${configText}\n\n${lang === 'zh' ? '[项目补充备注]' : '[Project Notes]'}: ${prev}` : configText;
     });
     // Scroll automatically down to inquiry form
     const inquirySection = document.getElementById("inquiry-section");
@@ -113,8 +120,14 @@ export default function App() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+
     if (!name || !email || !company) {
-      alert("Please fill in high-priority fields: Name, Email and Company Name.");
+      setFormError(
+        lang === "zh" 
+          ? "请完整填写主要的必填底栏：采购姓名、邮箱地址与企业公司名称。" 
+          : "Please fill in all high-priority fields: Procurement Name, B2B Email and Company Name."
+      );
       return;
     }
 
@@ -126,17 +139,19 @@ export default function App() {
       setSubmissionReceipt({
         ticketId,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-        estimatedLeadTime: "12-16 business days for initial pilot formulation prototyping",
+        estimatedLeadTime: lang === "zh" 
+          ? "12-16 个工作日（含初步配方打样及无菌微生物测试圈）" 
+          : "12-16 business days for initial pilot formulation prototyping",
         summary: {
           name,
           company,
           email,
-          category: selectedCategory?.title || "Custom Wipe Product",
-          material: "Configured substrate specifications loaded",
+          category: selectedCategory?.title || (lang === "zh" ? "定制卫生湿巾品类" : "Custom Wipe Product"),
+          material: lang === "zh" ? "已加载智能配置材质技术指标" : "Configured substrate specifications loaded",
           weightGsm: 55,
-          formulation: "Certified non-toxic active solution",
+          formulation: lang === "zh" ? "经临床检验温和不刺激防腐体系液" : "Certified non-toxic active solution",
           sheetCount: 80,
-          packaging: "Sterile high-barrier protective laminate",
+          packaging: lang === "zh" ? "高隔绝高保湿无菌密封复合薄膜" : "Sterile high-barrier protective laminate",
           scented: false
         }
       });
@@ -150,7 +165,8 @@ export default function App() {
     setCompany("");
     setEmail("");
     setMessage("");
-    setServiceType("OEM Service");
+    setServiceType(lang === "zh" ? "OEM 生产代工服务" : "OEM Formulation Service");
+    setFormError("");
   };
 
   // Scrolls fluidly to navigation sections
@@ -182,11 +198,11 @@ export default function App() {
               YY
             </div>
             <div>
-              <span className="font-sans font-bold text-lg md:text-xl text-primary tracking-tight block">
-                Yiying Hygiene
+              <span className="font-sans font-bold text-sm md:text-md text-primary tracking-tight block">
+                {lang === "zh" ? "宜莹卫生用品" : "Yiying Hygiene"}
               </span>
               <span className="text-[9px] font-mono text-text-secondary tracking-widest block uppercase -mt-1 font-semibold">
-                Clinical Precision Mfg
+                {lang === "zh" ? "临床精密代工智造" : "Clinical Precision Mfg"}
               </span>
             </div>
           </div>
@@ -194,16 +210,16 @@ export default function App() {
           {/* Nav Tabs */}
           <div className="hidden md:flex items-center gap-7">
             {[
-              { id: "home", label: "Home" },
-              { id: "categories", label: "Specializations" },
-              { id: "ecosystem", label: "OEM/ODM R&D" },
-              { id: "factory", label: "Manufacturing Hub" },
-              { id: "about", label: "About Yiying" }
+              { id: "home", label: t.navbar.home },
+              { id: "categories", label: t.navbar.specializations },
+              { id: "ecosystem", label: t.navbar.oemRnd },
+              { id: "factory", label: t.navbar.manufacturingHub },
+              { id: "about", label: t.navbar.aboutYiying }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => navigateToSection(tab.id)}
-                className={`relative py-1 text-xs font-mono font-semibold tracking-wide transition-colors ${
+                className={`relative py-1 text-xs font-mono font-semibold tracking-wide transition-colors cursor-pointer ${
                   activeTab === tab.id 
                     ? "text-primary" 
                     : "text-text-secondary hover:text-primary"
@@ -220,13 +236,26 @@ export default function App() {
             ))}
           </div>
 
-          {/* Quick Actions Action bar */}
+          {/* Quick Actions Action bar with Language Switcher */}
           <div className="flex items-center gap-3">
+            {/* Elegant Language Switcher Widget */}
+            <button
+              onClick={() => {
+                setLang(lang === "en" ? "zh" : "en");
+                setFormError("");
+              }}
+              className="flex items-center gap-1 px-3 py-2 bg-surface-low hover:bg-[#edf6f3] text-text-primary hover:text-primary transition-all border border-outline-clinical rounded-md font-mono text-[11px] font-bold cursor-pointer"
+              title={lang === "en" ? "切换至中文" : "Switch to English"}
+            >
+              <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{lang === "en" ? "中文" : "EN"}</span>
+            </button>
+
             <button 
               onClick={() => navigateToSection("inquiry-section")}
-              className="bg-primary text-white hover:bg-primary-hover px-5 py-2.5 rounded font-mono text-[11px] font-bold tracking-wide transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+              className="bg-primary text-white hover:bg-primary-hover px-4 py-2 rounded font-mono text-[11px] font-bold tracking-wide transition-all shadow-sm flex items-center gap-1 cursor-pointer"
             >
-              Contact Specialist <ArrowRight className="w-3.5 h-3.5 text-primary-fixed-dim" />
+              {t.navbar.contactSpecialist} <ArrowRight className="w-3.5 h-3.5 text-primary-fixed-dim" />
             </button>
           </div>
         </div>
@@ -254,32 +283,32 @@ export default function App() {
             <div className="max-w-2xl text-white">
               
               <div className="inline-flex items-center gap-2 bg-primary/20 border border-primary/30 py-1 px-3 rounded-full mb-6 text-primary-fixed-dim font-mono text-[10px] uppercase tracking-wider font-bold">
-                <ShieldCheck className="w-3.5 h-3.5 text-primary-fixed animate-pulse" /> Established April 2020 • Accredited Lab Facility
+                <ShieldCheck className="w-3.5 h-3.5 text-primary-fixed animate-pulse" /> {t.hero.established}
               </div>
               
               <h1 className="font-sans font-bold text-4.5xl md:text-5xl lg:text-5.5xl text-white tracking-tight leading-[1.1] mb-6">
-                Clinical Precision in <br />
-                <span className="text-primary-fixed">Hygiene Manufacturing.</span>
+                {t.hero.titleFirst} <br />
+                <span className="text-primary-fixed">{t.hero.titleSecond}</span>
               </h1>
               
               <p className="font-sans text-base md:text-lg text-[#baf7f2]/90 leading-relaxed mb-8 max-w-xl">
-                Advanced OEM/ODM solutions for medical-grade wipes, lint-free optical lens wipes, skin-safe cosmetic sheets, and organic pet grooming hygiene nonwovens. Built for global compliance.
+                {t.hero.description}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button 
                   onClick={() => navigateToSection("ecosystem")}
-                  className="bg-primary text-white hover:bg-primary-hover px-7 py-3 rounded text-xs font-mono font-bold tracking-wider flex items-center justify-center gap-2 group transition-all"
+                  className="bg-primary text-white hover:bg-primary-hover px-7 py-3 rounded text-xs font-mono font-bold tracking-wider flex items-center justify-center gap-2 group transition-all cursor-pointer"
                 >
-                  Configure Custom R&D Formula 
+                  {t.hero.btnConfigure} 
                   <ArrowRight className="w-4 h-4 text-primary-fixed-dim transition-transform group-hover:translate-x-1" />
                 </button>
                 
                 <button 
                   onClick={() => navigateToSection("categories")}
-                  className="bg-[#2a3231]/80 backdrop-blur border border-outline-clinical/30 text-white hover:bg-[#343e3d] px-7 py-3 rounded text-xs font-mono font-bold tracking-wider transition-all"
+                  className="bg-[#2a3231]/80 backdrop-blur border border-outline-clinical/30 text-white hover:bg-[#343e3d] px-7 py-3 rounded text-xs font-mono font-bold tracking-wider transition-all cursor-pointer"
                 >
-                  Explore Spec Catalog
+                  {t.hero.btnExplore}
                 </button>
               </div>
             </div>
@@ -287,20 +316,20 @@ export default function App() {
             {/* Real-time environmental specs banner */}
             <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 bg-white/5 backdrop-blur border border-white/10 rounded p-4 max-w-3xl">
               <div>
-                <span className="text-[10px] font-mono text-primary-fixed block">GMP R&D GRADE</span>
-                <span className="text-white text-xs font-bold font-sans">Class 100,000 Cleanroom</span>
+                <span className="text-[10px] font-mono text-primary-fixed block">{t.hero.metricCleanroomTitle}</span>
+                <span className="text-white text-xs font-bold font-sans">{t.hero.metricCleanroomValue}</span>
               </div>
               <div>
-                <span className="text-[10px] font-mono text-primary-fixed block">WATER COMPLIANCE</span>
-                <span className="text-white text-xs font-bold font-sans">RO Sterile Pure Water</span>
+                <span className="text-[10px] font-mono text-primary-fixed block">{t.hero.metricWaterTitle}</span>
+                <span className="text-white text-xs font-bold font-sans">{t.hero.metricWaterValue}</span>
               </div>
               <div>
-                <span className="text-[10px] font-mono text-primary-fixed block">BATCH CAPACITY</span>
-                <span className="text-white text-xs font-bold font-sans">15,000 sqm High-speed Mfg</span>
+                <span className="text-[10px] font-mono text-primary-fixed block">{t.hero.metricCapacityTitle}</span>
+                <span className="text-white text-xs font-bold font-sans">{t.hero.metricCapacityValue}</span>
               </div>
               <div>
-                <span className="text-[10px] font-mono text-primary-fixed block">STANDARDS IN USE</span>
-                <span className="text-white text-xs font-bold font-sans">ISO 9001, GMPC, CE</span>
+                <span className="text-[10px] font-mono text-primary-fixed block">{t.hero.metricStandardsTitle}</span>
+                <span className="text-white text-xs font-bold font-sans">{t.hero.metricStandardsValue}</span>
               </div>
             </div>
           </div>
@@ -310,17 +339,17 @@ export default function App() {
         <section className="bg-surface-low border-b border-outline-clinical/45 py-8 overflow-hidden">
           <div className="max-w-[1280px] mx-auto px-6 mb-4">
             <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-widest block text-center mb-1">
-              Safety Verification & Compliance Registry
+              {t.certifications.title}
             </span>
             <p className="text-xs text-text-secondary text-center max-w-lg mx-auto">
-              Click any certification below to view licensed parameters, cleanroom scopes, and standardized clinical test bounds.
+              {t.certifications.desc}
             </p>
           </div>
 
           {/* Loop Marquee Bar */}
           <div className="relative border-t border-b border-outline-clinical/20 bg-white/60 py-3.5">
             <div className="animate-marquee-slow flex whitespace-nowrap gap-16 text-xs text-text-primary">
-              {CERTIFICATIONS.map((cert, index) => (
+              {localizedCertifications.map((cert, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedCert(cert)}
@@ -332,7 +361,7 @@ export default function App() {
                 </button>
               ))}
               {/* Loop Duplicate for smooth flow */}
-              {CERTIFICATIONS.map((cert, index) => (
+              {localizedCertifications.map((cert, index) => (
                 <button
                   key={`dup-${index}`}
                   onClick={() => setSelectedCert(cert)}
@@ -358,26 +387,26 @@ export default function App() {
                 <div className="bg-white border border-primary/20 rounded p-4 text-xs space-y-2 relative">
                   <button 
                     onClick={() => setSelectedCert(null)}
-                    className="absolute top-2.5 right-2.5 text-text-secondary hover:text-primary focus:outline-none"
+                    className="absolute top-2.5 right-2.5 text-text-secondary hover:text-primary focus:outline-none cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                   <div className="flex items-center gap-1.5 text-primary">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span className="font-mono font-bold text-xs uppercase">Verified Standard: {selectedCert.name}</span>
+                    <span className="font-mono font-bold text-xs uppercase">{t.certifications.standardTitle} {selectedCert.name}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 pt-1 font-sans text-text-secondary">
                     <div>
-                      <span className="block text-[10px] font-mono text-primary font-bold">LOB ACCOUNTABILITY</span>
+                      <span className="block text-[10px] font-mono text-primary font-bold">{t.certifications.lobTitle}</span>
                       <p className="text-text-primary text-[11px] font-medium leading-tight">{selectedCert.scope}</p>
                     </div>
                     <div>
-                      <span className="block text-[10px] font-mono text-primary font-bold">STATUS RECORD</span>
+                      <span className="block text-[10px] font-mono text-primary font-bold">{t.certifications.statusTitle}</span>
                       <p className="text-text-primary text-[11px] font-medium leading-tight">{selectedCert.year}</p>
                     </div>
                   </div>
                   <div className="bg-surface-low p-2 rounded border border-outline-clinical/30 text-[10px] mt-2">
-                    <span className="font-mono font-bold block text-primary mb-0.5">GMP LAB COMMENT:</span>
+                    <span className="font-mono font-bold block text-primary mb-0.5">{t.certifications.gmpComment}</span>
                     {selectedCert.clinicalNote}
                   </div>
                 </div>
@@ -391,23 +420,23 @@ export default function App() {
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
             <div>
               <span className="text-xs font-mono font-bold text-primary block uppercase tracking-wider mb-1">
-                Clinical Specialization
+                {t.categories.title}
               </span>
               <h2 className="text-3xl font-sans font-bold text-text-primary tracking-tight">
-                High-Value Hygiene Categories
+                {t.categories.subtitle}
               </h2>
               <p className="text-text-secondary text-xs mt-1 max-w-xl">
-                Select a hygiene category card below to inspect fiber compositions, RO water parameters, chemical solutions, and custom size catalogs.
+                {t.categories.desc}
               </p>
             </div>
             <div className="text-xs font-mono text-text-secondary flex items-center gap-1 bg-surface-low px-3 py-1.5 rounded border border-outline-clinical/40">
-              <Sparkles className="w-3.5 h-3.5 text-primary" /> Multi-size flexible packaging tooling ready
+              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" /> {t.categories.badgeTooling}
             </div>
           </div>
 
           {/* Grid Cards of Specialization Categories */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {CATEGORIES.map((cat) => (
+            {localizedCategories.map((cat) => (
               <div 
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat)}
@@ -443,12 +472,12 @@ export default function App() {
 
                   <div className="border-t border-[#e7f0ed]/80 pt-3 mt-4 flex justify-between items-center text-[10px] text-text-secondary">
                     <div>
-                      <span className="block font-mono tracking-wider text-[8px] uppercase">SUBSTRATE BLEND</span>
-                      <span className="font-semibold text-text-primary block">{cat.title === "Personal Care" ? "Bamboo/Tencel" : cat.title === "Lens & Screen" ? "Micro-Fine Fiber" : "Spunlace Blend"}</span>
+                      <span className="block font-mono tracking-wider text-[8px] uppercase">{t.categories.substrateLabel}</span>
+                      <span className="font-semibold text-text-primary block text-[11px] truncate max-w-[120px]">{cat.title === "Personal Care" || cat.title === "个人护理及美妆卸妆湿布" ? (lang === "zh" ? "天然竹/天丝" : "Bamboo/Tencel") : cat.title === "Lens & Screen Cleaning" || cat.title === "镜头与屏幕镜面纸" ? (lang === "zh" ? "光学极细纤维" : "Micro-Fine Fiber") : (lang === "zh" ? "水刺纯棉混纺" : "Spunlace Blend")}</span>
                     </div>
                     <div>
-                      <span className="block font-mono tracking-wider text-[8px] uppercase">STANDARD GSM</span>
-                      <span className="font-semibold text-text-primary block">{cat.title === "Pet Care" ? "55-70 GSM" : "38-65 GSM"}</span>
+                      <span className="block font-mono tracking-wider text-[8px] uppercase">{t.categories.gsmLabel}</span>
+                      <span className="font-semibold text-text-primary block">{cat.title === "Pet Care Hygiene" || cat.title === "宠物安全卫生湿巾" ? "55-70 GSM" : "38-65 GSM"}</span>
                     </div>
                   </div>
                 </div>
@@ -474,17 +503,17 @@ export default function App() {
                   {/* Close button modal */}
                   <button 
                     onClick={() => setSelectedCategory(null)}
-                    className="absolute top-4 right-4 bg-surface-low hover:bg-surface-container rounded-full p-2 text-text-secondary hover:text-primary transition-all focus:outline-none"
+                    className="absolute top-4 right-4 bg-surface-low hover:bg-surface-container rounded-full p-2 text-text-secondary hover:text-primary transition-all focus:outline-none cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
 
                   <div>
                     <span className="text-[10px] font-mono text-primary font-bold tracking-widest uppercase block mb-1">
-                      Cat: {selectedCategory.badge}
+                      {lang === "zh" ? "细分子类别" : "Category Badge"}: {selectedCategory.badge}
                     </span>
                     <h3 className="text-2xl font-bold text-text-primary font-sans leading-none">
-                      {selectedCategory.title} Spec Sheet
+                      {selectedCategory.title} {t.categories.specSheetTitle}
                     </h3>
                   </div>
 
@@ -497,13 +526,13 @@ export default function App() {
                     />
                     <div className="space-y-4">
                       <div>
-                        <span className="text-[9px] font-mono text-text-secondary uppercase tracking-wider block font-bold">Formula Description</span>
+                        <span className="text-[9px] font-mono text-text-secondary uppercase tracking-wider block font-bold">{t.categories.formulaDescLabel}</span>
                         <p className="text-xs text-text-primary leading-relaxed mt-0.5">
                           {selectedCategory.description}
                         </p>
                       </div>
                       <div className="bg-surface-low border border-[#edf6f3] rounded p-2.5 space-y-2">
-                        <span className="text-[9px] font-mono text-primary uppercase tracking-wider block font-bold">Standard Formula Presets</span>
+                        <span className="text-[9px] font-mono text-primary uppercase tracking-wider block font-bold">{t.categories.standardFormulaLabel}</span>
                         <div className="text-[10px] text-text-primary italic font-medium leading-snug">
                           {selectedCategory.standardIngredients}
                         </div>
@@ -514,30 +543,30 @@ export default function App() {
                   {/* Technical values catalog details table */}
                   <div className="bg-surface-lowest border border-outline-clinical/60 rounded overflow-hidden">
                     <div className="p-2 border-b border-outline-clinical/40 bg-surface-low/50">
-                      <span className="text-[9px] font-mono text-primary uppercase font-bold tracking-wider">Clinical Specs Matrix & Tooling Ready Parameters</span>
+                      <span className="text-[9px] font-mono text-primary uppercase font-bold tracking-wider">{t.categories.specsMatrixTitle}</span>
                     </div>
                     <table className="w-full text-xs text-left text-text-primary border-collapse">
                       <thead>
                         <tr className="border-b border-outline-clinical/30 font-mono text-[9px] text-text-secondary uppercase">
-                          <th className="p-2 pl-3">Param</th>
-                          <th className="p-2">Standard Spec Range</th>
+                          <th className="p-2 pl-3">{t.categories.specsParamLabel}</th>
+                          <th className="p-2">{t.categories.specsValueLabel}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b border-[#e7f0ed]/40">
-                          <td className="p-2 pl-3 font-semibold text-text-secondary">Substrate GSM Range</td>
+                          <td className="p-2 pl-3 font-semibold text-text-secondary">{t.categories.specsGsmRange}</td>
                           <td className="p-2 font-mono text-[11px] font-bold text-primary">{selectedCategory.standardGSM}</td>
                         </tr>
                         <tr className="border-b border-[#e7f0ed]/40">
-                          <td className="p-2 pl-3 font-semibold text-text-secondary">Certified Available Sizes</td>
-                          <td className="p-2 font-mono text-[11px] text-text-primary">
+                          <td className="p-2 pl-3 font-semibold text-text-secondary">{t.categories.specsSizes}</td>
+                          <td className="p-2 font-mono text-[11px] text-text-primary text-[10px]">
                             {selectedCategory.availableSizes.join(" / ")}
                           </td>
                         </tr>
                         <tr className="border-b border-[#e7f0ed]/40">
-                          <td className="p-2 pl-3 font-semibold text-text-secondary">Recommended Sheet Counts</td>
+                          <td className="p-2 pl-3 font-semibold text-text-secondary">{t.categories.specsCounts}</td>
                           <td className="p-2 font-mono text-[11px] text-text-primary">
-                            {selectedCategory.commonSheetCounts.join(", ")} sheets
+                            {selectedCategory.commonSheetCounts.join(", ")} {lang === "zh" ? "张数" : "sheets"}
                           </td>
                         </tr>
                       </tbody>
@@ -552,19 +581,21 @@ export default function App() {
                       }}
                       className="flex-1 bg-primary text-white py-3 px-4 rounded text-xs font-mono font-bold tracking-wider hover:bg-primary-hover transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      Configure This Substrate Base
+                      {t.categories.btnConfigureBase}
                       <ArrowRight className="w-4 h-4 text-primary-fixed-dim" />
                     </button>
                     <button 
                       onClick={() => {
-                        const defaultMessage = `Hello, I would like to request an OEM/ODM proposal for standard ${selectedCategory.title} wipes. Specifically target size: ${selectedCategory.availableSizes[0]} and typical sheet count.`;
+                        const defaultMessage = lang === "zh"
+                          ? `您好，我想针对标准的 [${selectedCategory.title}] 产品申请 OEM/ODM 代工报价和打样。希望获得的规格尺寸是: ${selectedCategory.availableSizes[0]}，以及首选的常片包数。`
+                          : `Hello, I would like to request an OEM/ODM proposal for standard ${selectedCategory.title} wipes. Specifically target size: ${selectedCategory.availableSizes[0]} and typical sheet count.`;
                         setMessage(defaultMessage);
                         setSelectedCategory(null);
                         navigateToSection("inquiry-section");
                       }}
-                      className="flex-shrink-0 bg-surface-low border border-outline-clinical hover:bg-[#e7f0ed] text-text-primary py-3 px-5 rounded text-xs font-mono font-bold transition-all"
+                      className="flex-shrink-0 bg-surface-low border border-outline-clinical hover:bg-[#e7f0ed] text-text-primary py-3 px-5 rounded text-xs font-mono font-bold transition-all cursor-pointer"
                     >
-                      Quick Proposal Draft
+                      {t.categories.btnProposalDraft}
                     </button>
                   </div>
                 </motion.div>
@@ -579,21 +610,21 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-16">
               <div className="lg:col-span-7">
                 <span className="text-xs font-mono font-bold text-primary block uppercase tracking-wider mb-1">
-                  Manufacturing Excellence
+                  {t.ecosystem.badge}
                 </span>
                 <h2 className="text-3.5xl font-sans font-bold text-text-primary tracking-tight leading-tight">
-                  Integrated OEM/ODM Ecosystem
+                  {t.ecosystem.title}
                 </h2>
                 <p className="text-text-secondary text-sm leading-relaxed mt-3 max-w-2xl">
-                  From initial formula R&D testing in our microbiological cleanrooms to rapid high-volume substrate folding and packaging, we offer a completely integrated, traceable clean manufacturing service. 
+                  {t.ecosystem.description}
                 </p>
               </div>
               <div className="lg:col-span-5 flex justify-start lg:justify-end">
                 <div className="bg-white/80 border border-outline-clinical rounded p-4 text-xs font-mono text-text-secondary max-w-sm flex gap-3 shadow-xs">
                   <Database className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-text-primary block">Specification API Pre-Load</span>
-                    Configure fiber blends and solutions below, then click to populate directly into our contact desk.
+                    <span className="font-bold text-text-primary block">{t.ecosystem.apiTitle}</span>
+                    {t.ecosystem.apiDesc}
                   </div>
                 </div>
               </div>
@@ -604,20 +635,20 @@ export default function App() {
               {[
                 {
                   step: "01",
-                  title: "Formula R&D System",
-                  desc: "Custom formulations engineered in our Class 100k sterile lab with continuous RO-purification monitoring and allergen screenings.",
+                  title: t.ecosystem.step1Title,
+                  desc: t.ecosystem.step1Desc,
                   icon: <FlaskConical className="w-5 h-5 text-primary" />
                 },
                 {
                   step: "02",
-                  title: "Flexible Automated Line",
-                  desc: "Enclosed, touch-free folding corridors supporting various folding configurations (Z, C, interfold) with fast material changeover.",
+                  title: t.ecosystem.step2Title,
+                  desc: t.ecosystem.step2Desc,
                   icon: <Factory className="w-5 h-5 text-primary" />
                 },
                 {
                   step: "03",
-                  title: "Multi-Stage Diagnostic QC",
-                  desc: "CCD visual cameras verify lint presence and structural defects. Hand audits inspect seal protection integrity.",
+                  title: t.ecosystem.step3Title,
+                  desc: t.ecosystem.step3Desc,
                   icon: <ShieldCheck className="w-5 h-5 text-primary" />
                 }
               ].map((item, idx) => (
@@ -639,7 +670,7 @@ export default function App() {
             </div>
 
             {/* Interactive OemConfigurator Embedment */}
-            <OemConfigurator onApplyConfig={handleApplyConfig} />
+            <OemConfigurator onApplyConfig={handleApplyConfig} lang={lang} />
           </div>
         </section>
 
@@ -652,35 +683,35 @@ export default function App() {
               <div className="lg:col-span-5 space-y-8">
                 <div>
                   <span className="text-primary-fixed font-mono text-[10px] uppercase tracking-widest font-bold block mb-1">
-                    Certified Production Capabilities
+                    {t.factory.badge}
                   </span>
                   <h2 className="text-3xl font-sans font-bold text-white tracking-tight">
-                    Our Sterile Manufacturing Hub
+                    {t.factory.title}
                   </h2>
                   <p className="text-surface-variant text-xs leading-relaxed mt-2.5">
-                    Operating high-speed packaging engines inside highly-monitored sterile industrial corridors. Traceability standards guarantee lot consistency.
+                    {t.factory.description}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 pt-4">
                   <div className="border-l border-primary/40 pl-4 py-1">
                     <div className="text-white font-sans text-3xl font-bold tracking-tight">
-                      {sqmFacility.toLocaleString()}+ <span className="text-primary-fixed text-xs block font-mono uppercase font-bold mt-1">Sqm Clean Facility</span>
+                      {sqmFacility.toLocaleString()}+ <span className="text-primary-fixed text-xs block font-mono uppercase font-bold mt-1">{t.factory.sqmLabel}</span>
                     </div>
                   </div>
                   <div className="border-l border-primary/40 pl-4 py-1">
                     <div className="text-white font-sans text-3xl font-bold tracking-tight">
-                      {marketsCount}+ <span className="text-primary-fixed text-xs block font-mono uppercase font-bold mt-1">Markets Reached</span>
+                      {marketsCount}+ <span className="text-primary-fixed text-xs block font-mono uppercase font-bold mt-1">{t.factory.marketsLabel}</span>
                     </div>
                   </div>
                   <div className="border-l border-primary/40 pl-4 py-1">
                     <div className="text-white font-sans text-3xl font-bold tracking-tight">
-                      {staffCount} <span className="text-primary-fixed text-xs block font-mono uppercase font-bold mt-1">Advanced Eng Staff</span>
+                      {staffCount} <span className="text-primary-fixed text-xs block font-mono uppercase font-bold mt-1">{t.factory.staffLabel}</span>
                     </div>
                   </div>
                   <div className="border-l border-primary/40 pl-4 py-1">
                     <div className="text-white font-sans text-3xl font-bold tracking-tight text-primary-fixed">
-                      24/7 <span className="text-white text-xs block font-mono uppercase font-bold mt-1">Operations</span>
+                      24/7 <span className="text-white text-xs block font-mono uppercase font-bold mt-1">{t.factory.operationsLabel}</span>
                     </div>
                   </div>
                 </div>
@@ -689,7 +720,7 @@ export default function App() {
                   onClick={() => navigateToSection("inquiry-section")}
                   className="bg-primary hover:bg-primary-hover text-white py-3.5 px-6 rounded font-mono text-xs font-bold tracking-wider transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
-                  Schedule Cleanroom Facility Tour <ArrowRight className="w-4 h-4 text-primary-fixed" />
+                  {t.factory.btnTour} <ArrowRight className="w-4 h-4 text-primary-fixed" />
                 </button>
               </div>
 
@@ -697,15 +728,15 @@ export default function App() {
               <div className="lg:col-span-7 space-y-4">
                 <div className="flex border-b border-[#3a4a48] gap-4 text-xs font-mono pb-2">
                   {[
-                    { id: 0, label: "Folding Engine" },
-                    { id: 1, label: "Formulation R&D Station" }
+                    { id: 0, label: t.factory.tabFolding },
+                    { id: 1, label: t.factory.tabRnd }
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveFacilityStep(tab.id)}
-                      className={`pb-1 px-1 transition-all ${
+                      className={`pb-1 px-1 transition-all cursor-pointer ${
                         activeFacilityStep === tab.id 
-                          ? "border-b-2 border-primary-fixed text-primary-fixed" 
+                          ? "border-b-2 border-primary-fixed text-primary-fixed font-bold" 
                           : "text-surface-variant hover:text-white"
                       }`}
                     >
@@ -725,25 +756,25 @@ export default function App() {
                   >
                     <img 
                       className="rounded object-cover h-64 w-full border border-white/5 select-none pointer-events-none" 
-                      src={EQUIPMENTS[activeFacilityStep].image} 
-                      alt={EQUIPMENTS[activeFacilityStep].name}
+                      src={localizedEquipments[activeFacilityStep].image} 
+                      alt={localizedEquipments[activeFacilityStep].name}
                       referrerPolicy="no-referrer"
                     />
                     
                     <div>
                       <span className="text-[9px] font-mono text-primary-fixed uppercase tracking-wider font-bold">
-                        Equipment specs tag: {EQUIPMENTS[activeFacilityStep].tag}
+                        {t.factory.specTitle} {localizedEquipments[activeFacilityStep].tag}
                       </span>
                       <h4 className="text-md text-white font-sans font-bold leading-tight mt-0.5">
-                        {EQUIPMENTS[activeFacilityStep].name}
+                        {localizedEquipments[activeFacilityStep].name}
                       </h4>
                       <p className="text-xs text-surface-variant leading-relaxed mt-1">
-                        {EQUIPMENTS[activeFacilityStep].description}
+                        {localizedEquipments[activeFacilityStep].description}
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3.5 border-t border-[#3a4a48] pt-3 text-[11px]">
-                      {EQUIPMENTS[activeFacilityStep].specs.map((spec, sIdx) => (
+                      {localizedEquipments[activeFacilityStep].specs.map((spec, sIdx) => (
                         <div key={sIdx}>
                           <span className="text-surface-variant block font-sans">{spec.label}</span>
                           <span className="text-primary-fixed font-mono font-bold">{spec.value}</span>
@@ -773,92 +804,119 @@ export default function App() {
                 >
                   <div className="text-center max-w-2xl mx-auto mb-10">
                     <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-widest block mb-1">
-                      Start Your Production Journey
+                      {t.inquiry.badge}
                     </span>
                     <h3 className="text-3xl font-sans font-bold text-text-primary tracking-tight">
-                      Request Comprehensive OEM/ODM Proposal
+                      {t.inquiry.title}
                     </h3>
                     <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-                      Complete standard client parameter checks below. Our lead clinical formulation engineers and production analysts will respond with a formalized batch and price sheet within 24 hours.
+                      {t.inquiry.description}
                     </p>
                   </div>
 
                   <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs text-text-primary">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-mono text-primary uppercase tracking-wider font-bold block">
-                        Procurement Name <span className="text-red-500">*</span>
+                        {t.inquiry.nameLabel} <span className="text-red-500">*</span>
                       </label>
                       <input 
                         type="text" 
                         required
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Director of Clinical Operations"
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          setFormError("");
+                        }}
+                        placeholder={t.inquiry.namePlaceholder}
                         className="w-full h-11 bg-surface-low border border-outline-clinical/60 rounded px-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-sans"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-mono text-primary uppercase tracking-wider font-bold block">
-                        Company Name <span className="text-red-500">*</span>
+                        {t.inquiry.companyLabel} <span className="text-red-500">*</span>
                       </label>
                       <input 
                         type="text" 
                         required
                         value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                        placeholder="e.g. Global Health Corp Inc."
+                        onChange={(e) => {
+                          setCompany(e.target.value);
+                          setFormError("");
+                        }}
+                        placeholder={t.inquiry.companyPlaceholder}
                         className="w-full h-11 bg-surface-low border border-outline-clinical/60 rounded px-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-sans"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-mono text-primary uppercase tracking-wider font-bold block">
-                        B2B Email Address <span className="text-red-500">*</span>
+                        {t.inquiry.emailLabel} <span className="text-red-500">*</span>
                       </label>
                       <input 
                         type="email" 
                         required
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g. contact@corporatehealthcare.com"
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          setFormError("");
+                        }}
+                        placeholder={t.inquiry.emailPlaceholder}
                         className="w-full h-11 bg-surface-low border border-outline-clinical/60 rounded px-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-sans"
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-mono text-primary uppercase tracking-wider font-bold block">
-                        Service Class Category
+                        {t.inquiry.serviceLabel}
                       </label>
                       <select 
                         value={serviceType}
                         onChange={(e) => setServiceType(e.target.value)}
-                        className="w-full h-11 bg-surface-low border border-outline-clinical/60 rounded px-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-sans cursor-pointer"
+                        className="w-full h-11 bg-surface-low border border-outline-clinical/60 rounded px-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-sans cursor-pointer animate-none"
                       >
-                        <option>OEM Formulation Service</option>
-                        <option>ODM Complete Design</option>
-                        <option>Stock Nonwoven Purchase</option>
-                        <option>Bulk Container Contract mfg</option>
+                        {lang === "zh" ? (
+                          <>
+                            <option>OEM 配方生产服务</option>
+                            <option>ODM 整体设计定制</option>
+                            <option>原厂批量集装箱代工</option>
+                            <option>基础成品大宗协议代采购</option>
+                          </>
+                        ) : (
+                          <>
+                            <option>OEM Formulation Service</option>
+                            <option>ODM Complete Design</option>
+                            <option>Stock Nonwoven Purchase</option>
+                            <option>Bulk Container Contract mfg</option>
+                          </>
+                        )}
                       </select>
                     </div>
 
                     <div className="md:col-span-2 space-y-1.5">
                       <div className="flex justify-between items-center">
                         <label className="text-[10px] font-mono text-primary uppercase tracking-wider font-bold">
-                          Project details, Formulation instructions & Material specifications
+                          {t.inquiry.messageLabel}
                         </label>
                         <span className="text-[9px] font-mono text-text-secondary bg-surface-low px-1.5 rounded">
-                          Self-load from R&D Configurator above
+                          {t.inquiry.messageBadge}
                         </span>
                       </div>
                       <textarea 
                         rows={6}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Describe your customized product details, fiber blends (Spunlace, bamboo fabric), sheet dimensions, required antiseptic formulations, or target launch zones..."
+                        placeholder={t.inquiry.messagePlaceholder}
                         className="w-full bg-surface-low border border-outline-clinical/60 rounded p-4 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary font-sans font-mono text-[11px] leading-relaxed"
                       />
                     </div>
+
+                    {formError && (
+                      <div className="md:col-span-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-[11px] flex items-center gap-2 font-semibold">
+                        <span className="w-1.5 h-1.5 bg-red-600 rounded-full shrink-0" />
+                        {formError}
+                      </div>
+                    )}
 
                     <div className="md:col-span-2 pt-3">
                       <button
@@ -869,11 +927,11 @@ export default function App() {
                         {isSubmitting ? (
                           <>
                             <span className="animate-spin border-2 border-t-transparent border-white w-4 h-4 rounded-full mr-2" />
-                            Submitting Spec into Sterile Audit Portal...
+                            {t.inquiry.btnSubmitting}
                           </>
                         ) : (
                           <>
-                            Submit Specification Inquiry
+                            {t.inquiry.btnSubmit}
                             <ArrowRight className="w-4 h-4 text-primary-fixed-dim" />
                           </>
                         )}
@@ -893,16 +951,16 @@ export default function App() {
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button 
                       onClick={() => window.print()}
-                      className="bg-surface-low hover:bg-surface-container rounded p-1.5 text-text-secondary hover:text-primary transition-all text-xs flex items-center gap-1 font-mono font-bold"
-                      title="Print specimen receipt sheet"
+                      className="bg-surface-low hover:bg-surface-container rounded p-1.5 text-text-secondary hover:text-primary transition-all text-xs flex items-center gap-1 font-mono font-bold cursor-pointer"
+                      title={lang === "zh" ? "打印规格评估书" : "Print specimen receipt sheet"}
                     >
-                      <Printer className="w-4 h-4" /> Print
+                      <Printer className="w-4 h-4" /> {t.inquiry.btnPrint}
                     </button>
                     <button 
                       onClick={resetInquiry}
-                      className="bg-surface-low hover:bg-surface-container rounded p-1.5 text-text-secondary hover:text-primary transition-all text-xs flex items-center gap-1 font-mono font-bold"
+                      className="bg-surface-low hover:bg-surface-container rounded p-1.5 text-text-secondary hover:text-primary transition-all text-xs flex items-center gap-1 font-mono font-bold cursor-pointer"
                     >
-                      <RotateCcw className="w-4 h-4" /> Reset Form
+                      <RotateCcw className="w-4 h-4" /> {t.inquiry.btnReset}
                     </button>
                   </div>
 
@@ -910,21 +968,21 @@ export default function App() {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="bg-primary text-white text-[10px] font-mono tracking-widest uppercase py-0.5 px-2 rounded w-fit font-bold">
-                          Official Spec Specimen Receipt
+                          {t.inquiry.receiptTitle}
                         </div>
                         <h4 className="text-xl font-bold font-sans text-text-primary tracking-tight mt-1.5">
-                          Inquiry File: {submissionReceipt.ticketId}
+                          {t.inquiry.receiptFile} {submissionReceipt.ticketId}
                         </h4>
                         <span className="text-[10px] font-mono text-text-secondary block mt-0.5">
-                          Registered: {submissionReceipt.timestamp}
+                          {t.inquiry.registeredLabel} {submissionReceipt.timestamp}
                         </span>
                       </div>
                       <div className="text-right hidden sm:block">
                         <span className="font-sans font-bold text-sm text-primary tracking-tight block">
-                          Yiying Hygiene Mfg
+                          {lang === "zh" ? "宜莹卫生智造" : "Yiying Hygiene Mfg"}
                         </span>
                         <span className="text-[9px] font-mono text-text-secondary block">
-                          Cleanroom Unit 3, CN
+                          {lang === "zh" ? "浙江三号无菌洁净车间" : "Cleanroom Unit 3, Zhejiang, CN"}
                         </span>
                       </div>
                     </div>
@@ -933,40 +991,44 @@ export default function App() {
                   <div className="space-y-4 text-xs">
                     <div className="bg-surface-low p-4 rounded border border-outline-clinical/30 grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">Authorized Buyer</span>
+                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.buyerLabel}</span>
                         <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.name}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">Registered Corporation</span>
+                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.corpLabel}</span>
                         <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.company}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">Contact Registry</span>
+                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.contactLabel}</span>
                         <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.email}</span>
                       </div>
                     </div>
 
                     <div>
                       <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block border-b border-outline-clinical/30 pb-1 mb-2">
-                        Registered Substrate Configuration
+                        {t.inquiry.registeredSpecTitle}
                       </span>
                       <p className="text-[11px] font-mono text-text-primary bg-slate-900 text-[#baf7f2] p-4 rounded leading-relaxed whitespace-pre-wrap select-all">
-                        {message || `Category: ${serviceType}\nNo additional configurations loaded.`}
+                        {message || t.inquiry.noSpecLoaded}
                       </p>
                     </div>
 
                     <div className="bg-teal-50 border border-primary/20 rounded p-4 flex gap-3 text-xs">
                       <FileCheck2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                       <div>
-                        <span className="font-bold text-primary block">Engine Diagnostic Result: Approved</span>
-                        Your loaded parameters are completely compatible with folding engine <span className="font-mono text-primary font-bold">Line 4A</span> and class-certified active ingredients. Estimated production lead time: <span className="font-mono font-bold text-text-primary">{submissionReceipt.estimatedLeadTime}</span>.
+                        <span className="font-bold text-primary block">{t.inquiry.approvedLabel}</span>
+                        {lang === "zh" ? (
+                          <span>您的上述配置和成分指标与大货全伺服折叠机械链 <span className="font-mono text-primary font-bold">Line 4A</span> 及临床级配方体系完美契合。样品研发及发运预估时效：<span className="font-mono font-bold text-text-primary underline decoration-primary decoration-2">{submissionReceipt.estimatedLeadTime}</span>。</span>
+                        ) : (
+                          <span>Your loaded parameters are completely compatible with folding engine <span className="font-mono text-primary font-bold">Line 4A</span> and class-certified active ingredients. Estimated production lead time: <span className="font-mono font-bold text-text-primary underline decoration-primary decoration-2">{submissionReceipt.estimatedLeadTime}</span>.</span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t border-[#e7f0ed] pt-6 mt-6 flex justify-between items-center text-[10px] text-text-secondary">
-                    <span>Authenticity MD5: 4bc8fa4ff89a71...</span>
-                    <span>Approved by Procurement Desk YY</span>
+                  <div className="border-t border-[#e7f0ed] pt-6 mt-6 flex justify-between items-center text-[10px] text-text-secondary font-mono">
+                    <span>{t.inquiry.authLabel}</span>
+                    <span className="font-sans font-semibold">{t.inquiry.praiseLabel}</span>
                   </div>
                 </motion.div>
               )}
@@ -980,34 +1042,34 @@ export default function App() {
           <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <span className="text-xs font-mono font-bold text-primary block uppercase tracking-wider mb-1">
-                Sterile Clean History
+                {t.about.badge}
               </span>
               <h3 className="text-2.5xl font-sans font-bold text-text-primary tracking-tight leading-tight">
-                Corporate Legacy & <br />
-                Our Clinical Mission
+                {t.about.titleFirst} <br />
+                {t.about.titleSecond}
               </h3>
               <p className="text-text-secondary text-xs leading-relaxed mt-4">
-                Since our launch in April 2020 at the center of precision medical nonwoven manufacturing, Yiying Hygiene has committed to providing advanced, touch-free folding corridors and customized antiseptic solutions for international buyers. Each batch leaves our Class 100k Cleanroom certified under ISO 9001 and CE regulations.
+                {t.about.description}
               </p>
               
               <div className="space-y-4 mt-6 text-xs">
                 <div className="flex gap-3 items-start">
-                  <div className="bg-primary/10 p-2 rounded">
+                  <div className="bg-primary/10 p-2 rounded shrink-0">
                     <Users className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <span className="font-bold text-text-primary block">Technical R&D Team</span>
-                    Highly specialized medical microbiologists verify skin-safety biocompatibility parameters at our labs daily.
+                    <span className="font-bold text-text-primary block">{t.about.teamTitle}</span>
+                    {t.about.teamDesc}
                   </div>
                 </div>
 
                 <div className="flex gap-3 items-start">
-                  <div className="bg-primary/10 p-2 rounded">
+                  <div className="bg-primary/10 p-2 rounded shrink-0">
                     <HeartHandshake className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <span className="font-bold text-text-primary block">Sustainability Standard</span>
-                    Eco-cellulose, certified USDA-biobased bamboo wipes, and 100% biodegradable fiber fabrics are fully supported under ODM.
+                    <span className="font-bold text-text-primary block">{t.about.sustainTitle}</span>
+                    {t.about.sustainDesc}
                   </div>
                 </div>
               </div>
@@ -1022,9 +1084,9 @@ export default function App() {
               />
               <div className="absolute inset-0 bg-primary/5 rounded-lg pointer-events-none" />
               <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur border border-outline-clinical/75 rounded p-3.5 max-w-sm text-xs shadow">
-                <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest block">Main Facility Site</span>
-                <span className="font-sans font-bold text-text-primary mt-1 block">Yiying HQ Plant 1</span>
-                <span className="text-text-secondary text-[10px] block font-light">Clean City Industrial Zone, Zhejiang, CN</span>
+                <span className="text-[9px] font-mono text-primary font-bold uppercase tracking-widest block">{t.about.h_site}</span>
+                <span className="font-sans font-bold text-text-primary mt-1 block">{t.about.h_name}</span>
+                <span className="text-text-secondary text-[10px] block font-light">{t.about.h_loc}</span>
               </div>
             </div>
           </div>
@@ -1037,17 +1099,17 @@ export default function App() {
         <div className="max-w-[1280px] mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <span className="font-sans font-bold text-lg text-white tracking-tight block">
-              Yiying Hygiene
+              {lang === "zh" ? "宜莹卫生用品有限公司" : "Yiying Hygiene"}
             </span>
             <span className="text-[10px] font-mono text-surface-variant block uppercase tracking-wider">
-              Clinical PrecisionMfg
+              {lang === "zh" ? "专业卫生品类精密智造" : "Clinical Precision Mfg"}
             </span>
             <p className="text-xs text-surface-variant leading-relaxed mt-4 pr-4">
-              Providing certified B2B nonwoven hygiene and cleaning product operations globally since 2020. Class 100,000 cleanroom certified.
+              {t.footer.desc}
             </p>
             <div className="flex gap-4 mt-6">
               <span className="text-surface-variant hover:text-white cursor-pointer" title="International Site">
-                <Globe className="w-5 h-5" />
+                <Globe className="w-5 h-5 animate-none" />
               </span>
               <span className="text-surface-variant hover:text-white cursor-pointer" title="Direct Email Line">
                 <Mail className="w-5 h-5" />
@@ -1056,39 +1118,61 @@ export default function App() {
           </div>
 
           <div>
-            <h5 className="font-mono text-xs font-bold text-primary-fixed block uppercase tracking-wider mb-4">RESOURCES</h5>
+            <h5 className="font-mono text-xs font-bold text-primary-fixed block uppercase tracking-wider mb-4">{t.footer.columnResources}</h5>
             <ul className="space-y-2.5 text-xs text-surface-variant font-medium">
-              <li><a className="hover:text-white transition-colors" href="#">Technical Material Safety Sheets (MSDS)</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Global Logistic Freight Lines</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Sterility Test Validation Sheets</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Corporate Brochure (English PDF)</a></li>
+              {lang === "zh" ? (
+                <>
+                  <li><a className="hover:text-white transition-colors" href="#">产品安全及理化检测证书 (MSDS)</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">集装箱海运干线及跨境舱期登记</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">无尘室微生物微粒定期滴测档案</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">宜莹企业技术手册画册白皮书 (PDF)</a></li>
+                </>
+              ) : (
+                <>
+                  <li><a className="hover:text-white transition-colors" href="#">Technical Material Safety Sheets (MSDS)</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">Global Logistic Freight Lines</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">Sterility Test Validation Sheets</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">Corporate Brochure (English PDF)</a></li>
+                </>
+              )}
             </ul>
           </div>
 
           <div>
-            <h5 className="font-mono text-xs font-bold text-primary-fixed block uppercase tracking-wider mb-4">LEGAL REGULATION</h5>
+            <h5 className="font-mono text-xs font-bold text-primary-fixed block uppercase tracking-wider mb-4">{t.footer.columnLegal}</h5>
             <ul className="space-y-2.5 text-xs text-surface-variant font-medium">
-              <li><a className="hover:text-white transition-colors" href="#">Sustainability Pledge</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Privacy Protection Policy</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">B2B OEM Terms of Service</a></li>
-              <li><a className="hover:text-white transition-colors" href="#">Class Compliance Directory</a></li>
+              {lang === "zh" ? (
+                <>
+                  <li><a className="hover:text-white transition-colors" href="#">绿色无纺布生态可持续承诺宣言</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">商业及配方专利信息保密协议规定</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">B2B 大货定制制造和供应合同范本</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">医疗级洁净度等级和法规核验指南</a></li>
+                </>
+              ) : (
+                <>
+                  <li><a className="hover:text-white transition-colors" href="#">Sustainability Pledge</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">Privacy Protection Policy</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">B2B OEM Terms of Service</a></li>
+                  <li><a className="hover:text-white transition-colors" href="#">Class Compliance Directory</a></li>
+                </>
+              )}
             </ul>
           </div>
 
           <div>
-            <h5 className="font-mono text-xs font-bold text-primary-fixed block uppercase tracking-wider mb-4">CONTACT REGISTER</h5>
+            <h5 className="font-mono text-xs font-bold text-primary-fixed block uppercase tracking-wider mb-4">{t.footer.columnContact}</h5>
             <div className="space-y-3 text-xs text-surface-variant font-medium">
               <div className="flex gap-2 items-start">
                 <Phone className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <span>WhatsApp Desk: +[Placeholder / Inquire]</span>
+                <span>{t.footer.phoneLabel} +[86 571-YIYING]</span>
               </div>
               <div className="flex gap-2 items-start">
                 <Mail className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <span>Email Contact: contact@yiying.com</span>
+                <span>{t.footer.emailLabel} contact@yiyinghygiene.com</span>
               </div>
               <div className="flex gap-2 items-start">
                 <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <span>Cleanroom City Center, Zhejiang Industrial, CN</span>
+                <span>{t.footer.addressLabel} {t.footer.addressValue}</span>
               </div>
             </div>
           </div>
@@ -1096,7 +1180,7 @@ export default function App() {
 
         <div className="border-t border-[#3a4a48]/50 py-8">
           <div className="max-w-[1280px] mx-auto px-6 text-center text-xs text-surface-variant opacity-70">
-            © {new Date().getFullYear()} Yiying Hygiene Ltd. All Rights Reserved. Clinical Precision Manufacturing for the Global Health Sector.
+            {t.footer.rights}
           </div>
         </div>
       </footer>
