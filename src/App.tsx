@@ -136,6 +136,63 @@ export default function App() {
     // Simulate high-precision diagnostic check of inputs
     setTimeout(() => {
       const ticketId = `YY-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      const parseConfigText = (msg: string) => {
+        const isZh = lang === "zh";
+        const defaultCategory = isZh ? "定制卫生湿巾品类" : "Custom Wipe Product";
+        const defaultMaterial = isZh ? "高柔韧水刺无纺布" : "High-flex Spunlace Nonwoven";
+        const defaultGsm = 55;
+        const defaultFormula = isZh ? "临床无敏配方体系" : "Clinical Non-toxic Formula";
+        const defaultSheetCount = 80;
+        const defaultPackaging = isZh ? "密封复合薄膜装" : "Seal Barrier Laminate";
+        const defaultScented = false;
+
+        if (!msg) {
+          return {
+            category: defaultCategory,
+            material: defaultMaterial,
+            weightGsm: defaultGsm,
+            formulation: defaultFormula,
+            sheetCount: defaultSheetCount,
+            packaging: defaultPackaging,
+            scented: defaultScented,
+          };
+        }
+
+        const categoryMatch = msg.match(/(?:主营品类:|Category:)\s*(.+)/i);
+        const materialMatch = msg.match(/(?:无纺基材:|Substrate:)\s*(.+?)(?:\s*\((\d+)\s*GSM\))?/i);
+        const formulaMatch = msg.match(/(?:研发配方:|Formula:)\s*(.+)/i);
+        const sheetMatch = msg.match(/(?:包装规格:\s*每包\s*|Sheet Count:\s*)(\d+)/i);
+        const packagingMatch = msg.match(/(?:几何形态:|Packaging Style:)\s*(.+)/i);
+        const aromaticMatch = msg.match(/(?:芳香气味:|Aroma Preference:)\s*(.+)/i);
+
+        let weightGsmNum = defaultGsm;
+        if (materialMatch && materialMatch[2]) {
+          weightGsmNum = parseInt(materialMatch[2]);
+        } else {
+          const fallbackGsm = msg.match(/(\d+)\s*GSM/i);
+          if (fallbackGsm) {
+            weightGsmNum = parseInt(fallbackGsm[1]);
+          }
+        }
+
+        const parsedScent = aromaticMatch 
+          ? (aromaticMatch[1].includes("轻柔") || (aromaticMatch[1].toLowerCase().includes("scent") && !aromaticMatch[1].toLowerCase().includes("unscented")))
+          : defaultScented;
+
+        return {
+          category: categoryMatch ? categoryMatch[1].trim() : defaultCategory,
+          material: materialMatch ? materialMatch[1].trim() : defaultMaterial,
+          weightGsm: weightGsmNum,
+          formulation: formulaMatch ? formulaMatch[1].trim() : defaultFormula,
+          sheetCount: sheetMatch ? parseInt(sheetMatch[1]) : defaultSheetCount,
+          packaging: packagingMatch ? packagingMatch[1].trim() : defaultPackaging,
+          scented: parsedScent,
+        };
+      };
+
+      const configData = parseConfigText(message);
+
       setSubmissionReceipt({
         ticketId,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
@@ -146,13 +203,7 @@ export default function App() {
           name,
           company,
           email,
-          category: selectedCategory?.title || (lang === "zh" ? "定制卫生湿巾品类" : "Custom Wipe Product"),
-          material: lang === "zh" ? "已加载智能配置材质技术指标" : "Configured substrate specifications loaded",
-          weightGsm: 55,
-          formulation: lang === "zh" ? "经临床检验温和不刺激防腐体系液" : "Certified non-toxic active solution",
-          sheetCount: 80,
-          packaging: lang === "zh" ? "高隔绝高保湿无菌密封复合薄膜" : "Sterile high-barrier protective laminate",
-          scented: false
+          ...configData
         }
       });
       setIsSubmitting(false);
@@ -946,9 +997,9 @@ export default function App() {
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  className="bg-white border border-primary/40 p-6 md:p-10 rounded-xl clean-shadow relative"
+                  className="bg-white border border-primary/45 p-6 md:p-10 rounded-xl clean-shadow relative grid grid-cols-1 lg:grid-cols-12 gap-8"
                 >
-                  <div className="absolute top-4 right-4 flex gap-2">
+                  <div className="absolute top-4 right-4 flex gap-2 z-20">
                     <button 
                       onClick={() => window.print()}
                       className="bg-surface-low hover:bg-surface-container rounded p-1.5 text-text-secondary hover:text-primary transition-all text-xs flex items-center gap-1 font-mono font-bold cursor-pointer"
@@ -964,71 +1015,215 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="border-b border-outline-clinical/50 pb-6 mb-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="bg-primary text-white text-[10px] font-mono tracking-widest uppercase py-0.5 px-2 rounded w-fit font-bold">
-                          {t.inquiry.receiptTitle}
-                        </div>
-                        <h4 className="text-xl font-bold font-sans text-text-primary tracking-tight mt-1.5">
-                          {t.inquiry.receiptFile} {submissionReceipt.ticketId}
-                        </h4>
-                        <span className="text-[10px] font-mono text-text-secondary block mt-0.5">
-                          {t.inquiry.registeredLabel} {submissionReceipt.timestamp}
-                        </span>
-                      </div>
-                      <div className="text-right hidden sm:block">
-                        <span className="font-sans font-bold text-sm text-primary tracking-tight block">
-                          {lang === "zh" ? "宜莹卫生智造" : "Yiying Hygiene Mfg"}
-                        </span>
-                        <span className="text-[9px] font-mono text-text-secondary block">
-                          {lang === "zh" ? "浙江三号无菌洁净车间" : "Cleanroom Unit 3, Zhejiang, CN"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 text-xs">
-                    <div className="bg-surface-low p-4 rounded border border-outline-clinical/30 grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.buyerLabel}</span>
-                        <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.corpLabel}</span>
-                        <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.company}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.contactLabel}</span>
-                        <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.email}</span>
-                      </div>
-                    </div>
-
+                  {/* Left Column: Compliance document and ticket details */}
+                  <div className="lg:col-span-7 space-y-6 flex flex-col justify-between">
                     <div>
-                      <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block border-b border-outline-clinical/30 pb-1 mb-2">
-                        {t.inquiry.registeredSpecTitle}
-                      </span>
-                      <p className="text-[11px] font-mono text-text-primary bg-slate-900 text-[#baf7f2] p-4 rounded leading-relaxed whitespace-pre-wrap select-all">
-                        {message || t.inquiry.noSpecLoaded}
-                      </p>
+                      <div className="border-b border-outline-clinical/50 pb-6 mb-6">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="bg-primary text-white text-[10px] font-mono tracking-widest uppercase py-0.5 px-2 rounded w-fit font-bold">
+                              {t.inquiry.receiptTitle}
+                            </div>
+                            <h4 className="text-xl font-bold font-sans text-text-primary tracking-tight mt-1.5">
+                              {t.inquiry.receiptFile} {submissionReceipt.ticketId}
+                            </h4>
+                            <span className="text-[10px] font-mono text-text-secondary block mt-0.5">
+                              {t.inquiry.registeredLabel} {submissionReceipt.timestamp}
+                            </span>
+                          </div>
+                          <div className="text-right hidden sm:block">
+                            <span className="font-sans font-bold text-sm text-primary tracking-tight block">
+                              {lang === "zh" ? "宜莹卫生智造" : "Yiying Hygiene Mfg"}
+                            </span>
+                            <span className="text-[9px] font-mono text-text-secondary block">
+                              {lang === "zh" ? "浙江三号无菌洁净车间" : "Cleanroom Unit 3, Zhejiang, CN"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 text-xs">
+                        <div className="bg-surface-low p-4 rounded border border-outline-clinical/30 grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.buyerLabel}</span>
+                            <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.corpLabel}</span>
+                            <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.company}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block">{t.inquiry.contactLabel}</span>
+                            <span className="font-semibold text-text-primary block text-[13px]">{submissionReceipt.summary.email}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-wider block border-b border-outline-clinical/30 pb-1 mb-2">
+                            {t.inquiry.registeredSpecTitle}
+                          </span>
+                          <p className="text-[11px] font-mono text-text-primary bg-slate-900 text-[#baf7f2] p-4 rounded leading-relaxed whitespace-pre-wrap select-all max-h-56 overflow-y-auto">
+                            {message || t.inquiry.noSpecLoaded}
+                          </p>
+                        </div>
+
+                        <div className="bg-[#edf6f3] border border-primary/20 rounded p-4 flex gap-3 text-xs">
+                          <FileCheck2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-primary block">{t.inquiry.approvedLabel}</span>
+                            {lang === "zh" ? (
+                              <span>您的上述配置和成分指标与大货全伺服折叠机械链 <span className="font-mono text-primary font-bold">Line 4A</span> 及临床级配方体系完美契合。样品研发及发运预估时效：<span className="font-mono font-bold text-text-primary underline decoration-primary decoration-2">{submissionReceipt.estimatedLeadTime}</span>。</span>
+                            ) : (
+                              <span>Your loaded parameters are completely compatible with folding engine <span className="font-mono text-primary font-bold">Line 4A</span> and class-certified active ingredients. Estimated production lead time: <span className="font-mono font-bold text-text-primary underline decoration-primary decoration-2">{submissionReceipt.estimatedLeadTime}</span>.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="bg-teal-50 border border-primary/20 rounded p-4 flex gap-3 text-xs">
-                      <FileCheck2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold text-primary block">{t.inquiry.approvedLabel}</span>
-                        {lang === "zh" ? (
-                          <span>您的上述配置和成分指标与大货全伺服折叠机械链 <span className="font-mono text-primary font-bold">Line 4A</span> 及临床级配方体系完美契合。样品研发及发运预估时效：<span className="font-mono font-bold text-text-primary underline decoration-primary decoration-2">{submissionReceipt.estimatedLeadTime}</span>。</span>
-                        ) : (
-                          <span>Your loaded parameters are completely compatible with folding engine <span className="font-mono text-primary font-bold">Line 4A</span> and class-certified active ingredients. Estimated production lead time: <span className="font-mono font-bold text-text-primary underline decoration-primary decoration-2">{submissionReceipt.estimatedLeadTime}</span>.</span>
-                        )}
-                      </div>
+                    <div className="border-t border-[#e7f0ed] pt-6 mt-6 flex justify-between items-center text-[10px] text-text-secondary font-mono">
+                      <span>{t.inquiry.authLabel}</span>
+                      <span className="font-sans font-semibold">{t.inquiry.praiseLabel}</span>
                     </div>
                   </div>
 
-                  <div className="border-t border-[#e7f0ed] pt-6 mt-6 flex justify-between items-center text-[10px] text-text-secondary font-mono">
-                    <span>{t.inquiry.authLabel}</span>
-                    <span className="font-sans font-semibold">{t.inquiry.praiseLabel}</span>
+                  {/* Right Column: High-fidelity Prototype Blueprint and Simulator diagnostics */}
+                  <div className="lg:col-span-5 flex flex-col justify-between space-y-6 border-t lg:border-t-0 lg:border-l border-outline-clinical/30 pt-6 lg:pt-0 lg:pl-6 print:hidden">
+                    <div className="bg-[#f0f7f4] border border-[#d1ebd9]/50 rounded-lg p-5 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-widest block">
+                          {lang === "zh" ? "3D 仿真实物图预览" : "3D PROTOTYPE VISUAL"}
+                        </span>
+                        <span className="text-[9px] font-mono text-primary-fixed bg-primary text-white font-bold uppercase px-1.5 py-0.5 rounded animate-pulse">
+                          {lang === "zh" ? "系统匹配就绪" : "COMPATIBLE"}
+                        </span>
+                      </div>
+
+                      {/* Package 3D-like Mock Rendering */}
+                      <div className="relative bg-white border border-[#e1eae7]/80 rounded-lg p-6 flex flex-col items-center justify-center min-h-[180px] overflow-hidden clean-shadow-sm">
+                        {/* Blueprint grid background */}
+                        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
+                          backgroundImage: "linear-gradient(#006a65 1px, transparent 1px), linear-gradient(90deg, #006a65 1px, transparent 1px)",
+                          backgroundSize: "20px 20px"
+                        }} />
+
+                        {/* Staggered floating cosmetic particles/sparkles */}
+                        <div className="absolute top-3 left-4 text-primary/20 animate-bounce">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div className="absolute bottom-4 right-4 text-primary/25 animate-pulse">
+                          <FlaskConical className="w-4 h-4" />
+                        </div>
+
+                        {/* Rendering pack container */}
+                        <motion.div
+                          initial={{ scale: 0.92, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.15 }}
+                          className="relative flex flex-col items-center z-10"
+                        >
+                          <div className="relative w-44 h-24 bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 rounded-lg shadow-sm flex items-center justify-center flex-col transition-all duration-300">
+                            {/* Seal tabs at the left/right representing sterile barrier packaging */}
+                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary/20 border-r border-[#006a65]/35 flex flex-col justify-between py-1">
+                              {[...Array(4)].map((_, i) => <div key={i} className="w-1 h-0.5 bg-primary/40 rounded-full" />)}
+                            </div>
+                            <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-primary/20 border-l border-[#006a65]/35 flex flex-col justify-between py-1">
+                              {[...Array(4)].map((_, i) => <div key={i} className="w-1 h-0.5 bg-primary/40 rounded-full" />)}
+                            </div>
+
+                            {/* Center sticker/seal cover for rescalable packaging style */}
+                            <div className="absolute -top-1.5 w-24 h-5 bg-white border border-primary/25 rounded-md flex items-center justify-center shadow-xs">
+                              <div className="w-20 h-2 bg-gradient-to-r from-primary/15 to-primary/40 rounded-sm" />
+                            </div>
+
+                            {/* Stacked sheets lines visual representing sheet thickness */}
+                            <div className="absolute bottom-2.5 left-3.5 right-3.5 bg-gradient-to-t from-primary/30 to-primary/5 rounded border-b border-primary/35"
+                                 style={{ height: `${Math.min((submissionReceipt.summary.sheetCount / 150) * 44 + 8, 54)}px` }}>
+                              <div className="absolute inset-x-0 top-0 h-[1.5px] bg-primary/50 border-t border-dashed border-primary" />
+                            </div>
+
+                            {/* Label text */}
+                            <span className="font-sans font-bold text-[10px] text-primary tracking-wide text-center uppercase z-20 px-2 truncate w-full">
+                              {submissionReceipt.summary.category}
+                            </span>
+                            <span className="font-mono text-[8px] text-text-secondary/90 mt-1 z-20">
+                              {submissionReceipt.summary.sheetCount} pcs / {submissionReceipt.summary.weightGsm} GSM
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-mono text-primary font-bold">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-fixed-dim opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                            </span>
+                            <span>{lang === "zh" ? "原型配置加载成功" : "CONFIG SUCCESSFULLY DEPLOYED"}</span>
+                          </div>
+                        </motion.div>
+                      </div>
+
+                      {/* Precise dynamic specs report for this custom prototype */}
+                      <div className="space-y-2.5 bg-white/70 backdrop-blur-sm border border-outline-clinical/30 p-4 rounded-lg text-xs">
+                        <span className="text-[10px] font-mono text-text-secondary block font-bold uppercase tracking-wider border-b border-outline-clinical/20 pb-1">
+                          {lang === "zh" ? "数字化制造诊断" : "PROTOTYPE TECHNICAL AUDIT"}
+                        </span>
+                        
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <span className="text-[9px] font-mono font-bold text-text-secondary uppercase">{lang === "zh" ? "估计抗拉强度" : "Est. Tensile strength"}</span>
+                            <span className="font-semibold text-text-primary block font-mono text-[11px]">
+                              {Math.round(submissionReceipt.summary.weightGsm * 1.5 * (submissionReceipt.summary.material.toLowerCase().includes("cross") || submissionReceipt.summary.material.includes("交叉") ? 1.4 : 1.0))} N/50mm
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-mono font-bold text-text-secondary uppercase">{lang === "zh" ? "液体吸附率" : "Liquid absorption"}</span>
+                            <span className="font-semibold text-text-primary block font-mono text-[11px]">
+                              {Math.round(submissionReceipt.summary.weightGsm * 3.8 * (submissionReceipt.summary.category.toLowerCase().includes("pet") || submissionReceipt.summary.category.includes("宠物") ? 1.2 : 1.0))}%
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-1.5 border-t border-[#edf6f3]">
+                          <div>
+                            <span className="text-[9px] font-mono font-bold text-text-secondary uppercase">{lang === "zh" ? "生态降解生命期" : "Eco biodegradability"}</span>
+                            <span className="font-semibold text-primary block text-[11px]">
+                              {submissionReceipt.summary.material.toLowerCase().includes("bamboo") || submissionReceipt.summary.material.toLowerCase().includes("tencel") || submissionReceipt.summary.material.includes("竹") || submissionReceipt.summary.material.includes("天丝") || submissionReceipt.summary.material.includes("棉")
+                                ? (lang === "zh" ? "60–90天全自降解" : "60–90 Days Eco Degradable")
+                                : (lang === "zh" ? "多层高隔绝材质" : "Composite Barrier Synthetic")}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-mono font-bold text-text-secondary uppercase">{lang === "zh" ? "微生物无菌度检测" : "Microbiology panel"}</span>
+                            <span className="font-semibold text-text-primary block text-[11px] font-mono text-primary">
+                              0% {lang === "zh" ? "病菌检出 (ISO 5 级)" : "Pathogen (Class ISO 5)"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-1 pt-1.5 border-t border-[#edf6f3]">
+                          <div>
+                            <span className="text-[9px] font-mono font-bold text-text-secondary uppercase">{lang === "zh" ? "选定外表面复合阻隔层" : "Surface barrier layer"}</span>
+                            <span className="font-medium text-text-secondary block text-[10px] leading-tight text-ellipsis overflow-hidden whitespace-nowrap" title={submissionReceipt.summary.packaging}>
+                              {submissionReceipt.summary.packaging}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Certifications stamp or assurance statement */}
+                    <div className="bg-surface-low border border-outline-clinical/30 rounded p-3 text-[10.5px] text-text-secondary flex gap-2.5 items-start">
+                      <div className="bg-primary/10 text-primary p-1 rounded shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div className="leading-relaxed">
+                        <span className="font-sans font-bold text-text-primary block text-[11px] mb-0.5">
+                          {lang === "zh" ? "医用临床级品质合规保证" : "Clinical Compliance Pledge"}
+                        </span>
+                        {lang === "zh" 
+                          ? "此数字样品规格由宜莹品控检测中心自动测定并核验。满足 ISO 9001、FDA、CE、GMPC 等国际卫生用品标准的无菌室高精度组装规范。" 
+                          : "This digital mock evaluation sheet is verified by Yiying QA/QC laboratory. Strictly conformant with GMP guidelines, FDA registered, CE, and ISO 13485 cleanroom procedures."}
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
