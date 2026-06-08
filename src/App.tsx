@@ -20,12 +20,15 @@ import {
   RotateCcw,
   Phone,
   MapPin,
-  X
+  X,
+  Lock,
+  Settings
 } from "lucide-react";
 import { CATEGORIES, CERTIFICATIONS, EQUIPMENTS } from "./data";
 import { Category, Certification, SubmissionResponse } from "./types";
 import OemConfigurator from "./components/OemConfigurator";
-import { Language, LOCALES, getLocalizedCategories, getLocalizedCertifications, getLocalizedEquipments } from "./locales";
+import { Language, LOCALES, getLocalizedCategories, getLocalizedCertifications, getLocalizedEquipments, TranslationDictionary } from "./locales";
+import AdminPanel, { SEOSettings } from "./components/AdminPanel";
 
 export default function App() {
   const [lang, setLang] = useState<Language>("en");
@@ -52,10 +55,74 @@ export default function App() {
   // Header scroll shadow toggle
   const [scrollActive, setScrollActive] = useState<boolean>(false);
 
-  const t = LOCALES[lang];
-  const localizedCategories = getLocalizedCategories(lang, CATEGORIES);
+  // Dynamic CMS state management initialized from Local Database (localStorage)
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const saved = localStorage.getItem("yiying_categories");
+    return saved ? JSON.parse(saved) : CATEGORIES;
+  });
+
+  const [localizations, setLocalizations] = useState<Record<Language, TranslationDictionary>>(() => {
+    const saved = localStorage.getItem("yiying_localizations");
+    return saved ? JSON.parse(saved) : LOCALES;
+  });
+
+  const [seoSettings, setSeoSettings] = useState<SEOSettings>(() => {
+    const saved = localStorage.getItem("yiying_seo_settings");
+    return saved ? JSON.parse(saved) : {
+      metaTitle: "Yiying Hygiene - Clinical Precision in Hygiene Manufacturing",
+      metaDescription: "Advanced OEM/ODM solutions for medical-grade wipes, lint-free optical lens wipes, skin-safe cosmetic sheets, and organic pet grooming hygiene nonwovens. Built for global compliance.",
+      metaKeywords: "OEM wipes, ODM wipes, hygiene manufacturing, medical wipes, cleanroom optical wipes, biodegradable bamboo wipes, Zhejiang Yiying",
+      ogTitle: "Yiying Hygiene - B2B Precision Nonwoven Manufacturing",
+      ogDescription: "Class 100k Cleanroom facility offering world-standard certified wet wiping substrates and formulation R&D.",
+      indexingEndpoint: "https://api.seo-engine.com/v1/update-index",
+      indexingToken: "yy-auth-92384a7e8e910",
+      sitemapUrl: "https://yiyinghygiene.com/sitemap.xml"
+    };
+  });
+
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
+  const t = localizations[lang];
+  const localizedCategories = getLocalizedCategories(lang, categories);
   const localizedCertifications = getLocalizedCertifications(lang, CERTIFICATIONS);
   const localizedEquipments = getLocalizedEquipments(lang, EQUIPMENTS);
+
+  // Sync SEO configurations dynamically to Browser DOM
+  useEffect(() => {
+    document.title = seoSettings.metaTitle;
+    
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement("meta");
+      metaDesc.setAttribute("name", "description");
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute("content", seoSettings.metaDescription);
+
+    let metaKey = document.querySelector('meta[name="keywords"]');
+    if (!metaKey) {
+      metaKey = document.createElement("meta");
+      metaKey.setAttribute("name", "keywords");
+      document.head.appendChild(metaKey);
+    }
+    metaKey.setAttribute("content", seoSettings.metaKeywords);
+
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    if (!ogTitle) {
+      ogTitle = document.createElement("meta");
+      ogTitle.setAttribute("property", "og:title");
+      document.head.appendChild(ogTitle);
+    }
+    ogTitle.setAttribute("content", seoSettings.ogTitle);
+
+    let ogDesc = document.querySelector('meta[property="og:description"]');
+    if (!ogDesc) {
+      ogDesc = document.createElement("meta");
+      ogDesc.setAttribute("property", "og:description");
+      document.head.appendChild(ogDesc);
+    }
+    ogDesc.setAttribute("content", seoSettings.ogDescription);
+  }, [seoSettings]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1374,11 +1441,48 @@ export default function App() {
         </div>
 
         <div className="border-t border-[#3a4a48]/50 py-8">
-          <div className="max-w-[1280px] mx-auto px-6 text-center text-xs text-surface-variant opacity-70">
-            {t.footer.rights}
+          <div className="max-w-[1280px] mx-auto px-6 flex flex-col sm:flex-row justify-between items-center text-xs text-surface-variant opacity-70 gap-4">
+            <span>{t.footer.rights}</span>
+            <button 
+              onClick={() => setIsAdminOpen(true)}
+              className="text-[#9bc2bc] hover:text-white font-mono text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all border border-[#3a4a48]/50 hover:border-[#9bc2bc]/30 rounded-md px-3 py-1.5 bg-[#253230]/45 shrink-0"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              {lang === "zh" ? "系统管理员尊享通道登录 (后台管理)" : "Admin Core CMS Logging (Password Protected)"}
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* Elegant Left-Corner Floating Admin Quick Hub */}
+      <div className="fixed bottom-6 left-6 z-40 print:hidden">
+        <button
+          onClick={() => setIsAdminOpen(true)}
+          className="bg-slate-900/90 hover:bg-slate-950 text-teal-400 hover:text-white transition-all duration-300 border border-teal-500/20 hover:border-teal-400/50 p-3 rounded-full shadow-lg hover:shadow-teal-500/10 backdrop-blur cursor-pointer group flex items-center gap-1.5"
+          title={lang === "zh" ? "打开系统后台内容/SEO管理控制台" : "Open System Admin CMS & SEO Hub"}
+        >
+          <Settings className="w-5 h-5 animate-none group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-mono font-bold tracking-wider max-w-0 group-hover:max-w-xs overflow-hidden transition-all duration-300 whitespace-nowrap">
+            {lang === "zh" ? "后台管理" : "BACKEND SYSTEM"}
+          </span>
+        </button>
+      </div>
+
+      {/* AnimatePresence CMS Panel rendering */}
+      <AnimatePresence>
+        {isAdminOpen && (
+          <AdminPanel 
+            lang={lang}
+            localizations={localizations}
+            setLocalizations={setLocalizations}
+            categories={categories}
+            setCategories={setCategories}
+            seoSettings={seoSettings}
+            setSeoSettings={setSeoSettings}
+            onClose={() => setIsAdminOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );
