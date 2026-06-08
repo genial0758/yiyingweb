@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-primary: #006a65;
+  --color-primary-hover: #00514d;
+  --color-primary-fixed: #1efcf1;
+  --color-primary-fixed-dim: #00ddd4;
+  --color-secondary: #296863;
+  --color-secondary-container: #adebe5;
+  --color-background-clean: #f2fbf9;
+  --color-surface-lowest: #ffffff;
+  --color-surface-low: #edf6f3;
+  --color-surface-container: #e7f0ed;
+  --color-surface-high: #e1eae7;
+  --color-text-primary: #151d1c;
+  --color-text-secondary: #3a4a48;
+  --color-outline-clinical: #b9cac7;
+  --color-inverse-surface: #2a3231;
+  --color-inverse-on-surface: #eaf3f0;
+}
+
+/* Custom styles for clean aesthetics */
+.clean-shadow {
+  box-shadow: 0px 4px 20px rgba(0, 106, 103, 0.05);
+}
+
+.clean-shadow-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clean-shadow-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 12px 30px rgba(0, 106, 103, 0.1);
+}
+
+/* Smooth custom scrollbar for clinical feels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f2fbf9;
+}
+::-webkit-scrollbar-thumb {
+  background: #006a65;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00514d;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-slow {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee-slow:hover {
+  animation-play-state: paused;
+}
+

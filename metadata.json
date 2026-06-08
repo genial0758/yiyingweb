@@ -1,0 +1,6 @@
+{
+  "name": "Yiying Hygiene",
+  "description": "Clinical Precision in Hygiene Manufacturing. Advanced OEM/ODM solutions for functional wipes and specialized cleaning products.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
